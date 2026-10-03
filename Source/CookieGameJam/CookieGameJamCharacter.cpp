@@ -169,7 +169,9 @@ void ACookieGameJamCharacter::Interact()
 			{
 				HeldItem = CurrentInteractable;
 				HeldItem->Pickup(HoldLocationComponent);
-			
+				
+				HeldItem->OnDestroyed.AddDynamic(this, &ACookieGameJamCharacter::OnHeldItemDestroyed);
+				
 				DisplayInteractText(FString("[E] Drop"));
 			}
 			
@@ -178,6 +180,7 @@ void ACookieGameJamCharacter::Interact()
 	else
 	{
 		HeldItem->Drop();
+		HeldItem->OnDestroyed.RemoveDynamic(this, &ACookieGameJamCharacter::OnHeldItemDestroyed);
 		HeldItem = nullptr;
 		
 		DisplayInteractText(FString(""));
@@ -191,6 +194,22 @@ void ACookieGameJamCharacter::TalkInteract()
 		CurrentInteractable->Interact(this, HeldItem);
 	}
 }
+
+void ACookieGameJamCharacter::OnHeldItemDestroyed(AActor* DestroyedActor)
+{
+	if (HeldItem == DestroyedActor)
+	{
+		HeldItem = nullptr;
+		
+		DisplayInteractText(FString(""));
+        
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Orange, TEXT("Held item was destroyed!"));
+		}
+	}
+}
+
 
 
 //PlayerInput and movement

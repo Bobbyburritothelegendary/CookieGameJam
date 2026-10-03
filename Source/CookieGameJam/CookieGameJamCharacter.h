@@ -64,6 +64,10 @@ protected:
 	UPROPERTY(EditAnywhere, Category ="Input")
 	class UInputAction* TalkAction;
 	
+	
+	UFUNCTION()
+	void OnHeldItemDestroyed(AActor* DestroyedActor);
+	
 public:
 	ACookieGameJamCharacter();
 	
@@ -99,6 +103,7 @@ protected:
 	
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void TalkInteract();
+
 
 protected:
 

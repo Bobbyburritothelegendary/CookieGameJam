@@ -27,9 +27,6 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
 	bool bIsPickedUp;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
-	FName ItemID;
 
 public:	
 	// Called every frame
@@ -49,4 +46,7 @@ public:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
 	bool bCanBePickedUp;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
+	FName ItemID;
 };

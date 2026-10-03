@@ -4,7 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "AInteractableBase.h"
+#include "Engine/DataTable.h"
+#include "GarryItemRow.h"
 #include "AGarryActor.generated.h"
+
 
 /**
  * 
@@ -13,6 +16,21 @@ UCLASS()
 class COOKIEGAMEJAM_API AAGarryActor : public AAInteractableBase
 {
 	GENERATED_BODY()
+	
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Orders")
+	UDataTable* ItemTable;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Orders")
+	FGarryItemRow CurrentOrder;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Orders")
+	bool bHasOrder = false;
+
+	bool PickRandomItem(FGarryItemRow& OutRow);
+	void Say(const FString& Message);
+	
+	
 	
 public:
 	AAGarryActor();
