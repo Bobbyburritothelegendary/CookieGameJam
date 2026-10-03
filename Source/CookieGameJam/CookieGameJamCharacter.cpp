@@ -2,6 +2,8 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "CookieGameJamCharacter.h"
+
+#include "AGarryActor.h"
 #include "Animation/AnimInstance.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -60,75 +62,98 @@ void ACookieGameJamCharacter::Tick(float DeltaTime)
 	
 	if (!FirstPersonCameraComponent || !GetWorld()) return;
 	
-	//Find Interactables using raycast -- If modify in future then set held item as an ignoredactor
-	if (!HeldItem)
+	//Find Interactables using raycast
+	FVector ForwardVector = FirstPersonCameraComponent->GetForwardVector();
+	
+	FVector StartLocation = FirstPersonCameraComponent->GetComponentLocation();
+	FVector EndLocation = StartLocation + (ForwardVector * InteractRange);
+	
+	FCollisionQueryParams CollisionParams;
+	CollisionParams.AddIgnoredActor(this);
+	
+	if (HeldItem)
 	{
-		FVector ForwardVector = FirstPersonCameraComponent->GetForwardVector();
+		CollisionParams.AddIgnoredActor(HeldItem);
+	}
+	FHitResult HitResult;
 	
-		FVector StartLocation = FirstPersonCameraComponent->GetComponentLocation();
-		FVector EndLocation = StartLocation + (ForwardVector * InteractRange);
+	bool bHit = GetWorld()->LineTraceSingleByChannel(
+		HitResult,
+		StartLocation,
+		EndLocation,
+		ECC_Visibility,
+		CollisionParams
+	);
 	
-		FCollisionQueryParams CollisionParams;
-		CollisionParams.AddIgnoredActor(this);
-	
-		FHitResult HitResult;
-	
-		bool bHit = GetWorld()->LineTraceSingleByChannel(
-			HitResult,
-			StartLocation,
-			EndLocation,
-			ECC_Visibility,
-			CollisionParams
+	if (bDrawDebugLine)
+	{
+		DrawDebugLine(GetWorld(),
+		StartLocation,
+		EndLocation,
+		bHit ? FColor::Green : FColor::Red,
+		false,
+		1.0f,
+		0,
+		1.5f
 		);
+	}
 	
-		if (bDrawDebugLine)
+	
+	
+	if (GEngine)
+	{
+		if (bHit && HitResult.GetActor())
 		{
-			DrawDebugLine(GetWorld(),
-			StartLocation,
-			EndLocation,
-			bHit ? FColor::Green : FColor::Red,
-			false,
-			1.0f,
-			0,
-			1.5f
-			);
-		}
-	
-	
-	
-		if (GEngine)
-		{
-			if (bHit && HitResult.GetActor())
-			{
-				AAInteractableBase* HitInteractable = Cast<AAInteractableBase>(HitResult.GetActor());
+			AAInteractableBase* HitInteractable = Cast<AAInteractableBase>(HitResult.GetActor());
 			
-				if (HitInteractable)
+			if (HitInteractable)
+			{
+				CurrentInteractable = HitInteractable;
+				GEngine->AddOnScreenDebugMessage(1, 2.0f, FColor::Red, FString::Printf(TEXT("Hit Actor: %s"), *HitResult.GetActor()->GetName()));
+				
+				if (HeldItem)
 				{
-					CurrentInteractable = HitInteractable;
-					GEngine->AddOnScreenDebugMessage(1, 2.0f, FColor::Red, FString::Printf(TEXT("Hit Actor: %s"), *HitResult.GetActor()->GetName()));
-				
-					FString PromptText = CurrentInteractable->GetPromptText();
-					GEngine->AddOnScreenDebugMessage(2, 2.0f, FColor::Red, PromptText);
-				
-					DisplayInteractText(PromptText);
+					if (HitInteractable->bCanBePickedUp == false)
+					{
+						FString PromptText = CurrentInteractable->GetPromptText();
+						GEngine->AddOnScreenDebugMessage(2, 2.0f, FColor::Red, PromptText);
+						DisplayInteractText(PromptText);
+					}
+					else
+					{
+						DisplayInteractText(FString("[E] Drop"));
+					}
 				}
 				else
 				{
-					CurrentInteractable = nullptr;
-					GEngine->AddOnScreenDebugMessage(1, 2.0f, FColor::Green, TEXT("No Interactable Actors Hit."));
+					FString PromptText = CurrentInteractable->GetPromptText();
+					GEngine->AddOnScreenDebugMessage(2, 2.0f, FColor::Red, PromptText);
 				
-					FString PromptText = FString("");
 					DisplayInteractText(PromptText);
 				}
 			}
 			else
 			{
 				CurrentInteractable = nullptr;
-				GEngine->AddOnScreenDebugMessage(1, 2.0f, FColor::Green, TEXT("Nothing hit."));
-			
-				FString PromptText = FString("");
-				DisplayInteractText(PromptText);
+				GEngine->AddOnScreenDebugMessage(1, 2.0f, FColor::Green, TEXT("No Interactable Actors Hit."));
+				
+				if (HeldItem)
+				{
+					DisplayInteractText(FString("[E] Drop"));
+				}
+				else
+				{
+					DisplayInteractText(FString(""));
+				}
+				
 			}
+		}
+		else
+		{
+			CurrentInteractable = nullptr;
+			GEngine->AddOnScreenDebugMessage(1, 2.0f, FColor::Green, TEXT("Nothing hit."));
+			
+			DisplayInteractText(FString(""));
 		}
 	}
 }
@@ -140,18 +165,32 @@ void ACookieGameJamCharacter::Interact()
 	{
 		if (CurrentInteractable)
 		{
-			HeldItem = CurrentInteractable;
-			HeldItem->Pickup(HoldLocationComponent);
+			if (CurrentInteractable->bCanBePickedUp == true)
+			{
+				HeldItem = CurrentInteractable;
+				HeldItem->Pickup(HoldLocationComponent);
+			
+				DisplayInteractText(FString("[E] Drop"));
+			}
+			
 		}
 	}
 	else
 	{
 		HeldItem->Drop();
 		HeldItem = nullptr;
+		
+		DisplayInteractText(FString(""));
 	}
 }
 
-
+void ACookieGameJamCharacter::TalkInteract()
+{
+	if (CurrentInteractable)
+	{
+		CurrentInteractable->Interact(this, HeldItem);
+	}
+}
 
 
 //PlayerInput and movement
@@ -171,7 +210,10 @@ void ACookieGameJamCharacter::SetupPlayerInputComponent(UInputComponent* PlayerI
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ACookieGameJamCharacter::LookInput);
 		EnhancedInputComponent->BindAction(MouseLookAction, ETriggerEvent::Triggered, this, &ACookieGameJamCharacter::LookInput);
 		
+		//Interactions
 		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &ACookieGameJamCharacter::Interact);
+		EnhancedInputComponent->BindAction(TalkAction, ETriggerEvent::Started, this, &ACookieGameJamCharacter::TalkInteract);
+		
 	}
 	else
 	{

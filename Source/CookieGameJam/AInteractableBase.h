@@ -27,13 +27,16 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
 	bool bIsPickedUp;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
+	FName ItemID;
 
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 	
 	UFUNCTION(BlueprintCallable, Category = "Interaction")
-	virtual void Interact();
+	virtual void Interact(AActor* Interactor, AAInteractableBase* HeldItem);
 	
 	UFUNCTION(BlueprintCallable, Category = "Interaction")
 	FString GetPromptText();
@@ -43,4 +46,7 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "Interaction")
 	virtual void Drop();
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
+	bool bCanBePickedUp;
 };

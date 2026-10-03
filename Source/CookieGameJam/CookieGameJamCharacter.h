@@ -33,9 +33,10 @@ class ACookieGameJamCharacter : public ACharacter
 	UCameraComponent* FirstPersonCameraComponent;
 	
 	//Interact
-	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Interaction", meta = (AllowPrivateAccess = "true"))
 	AAInteractableBase* CurrentInteractable;
 	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Interaction", meta = (AllowPrivateAccess = "true"))
 	AAInteractableBase* HeldItem;
 
 protected:
@@ -59,6 +60,9 @@ protected:
 	//Interact Action
 	UPROPERTY(EditAnywhere, Category ="Input")
 	class UInputAction* InteractAction;
+	
+	UPROPERTY(EditAnywhere, Category ="Input")
+	class UInputAction* TalkAction;
 	
 public:
 	ACookieGameJamCharacter();
@@ -92,6 +96,9 @@ protected:
 	//Interact
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void Interact();
+	
+	UFUNCTION(BlueprintCallable, Category="Input")
+	virtual void TalkInteract();
 
 protected:
 

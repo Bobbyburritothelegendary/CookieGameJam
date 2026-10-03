@@ -15,5 +15,8 @@ class COOKIEGAMEJAM_API AAGarryActor : public AAInteractableBase
 	GENERATED_BODY()
 	
 public:
+	AAGarryActor();
+	
+	virtual void Interact(AActor* Interactor, AAInteractableBase* HeldItem) override;
 	
 };

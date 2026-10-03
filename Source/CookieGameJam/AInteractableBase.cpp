@@ -13,8 +13,9 @@ AAInteractableBase::AAInteractableBase()
 
     StaticMeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMeshComp"));
     RootComponent = StaticMeshComp;
-    PromptText = FString("[E] Interact"); //Default Interact Prompt
+    PromptText = FString("[E] Pick Up"); //Default Interact Prompt
     bIsPickedUp = false;
+    bCanBePickedUp = true;
 }
 
 // Called when the game starts or when spawned
@@ -29,11 +30,11 @@ void AAInteractableBase::Tick(float DeltaTime)
     Super::Tick(DeltaTime);
 }
 
-void AAInteractableBase::Interact()
+void AAInteractableBase::Interact(AActor* Interactor, AAInteractableBase* HeldItem)
 {
     if (GEngine)
     {
-        GEngine->AddOnScreenDebugMessage(1, 2.0f, FColor::Green, TEXT("No Actors Hit."));
+        GEngine->AddOnScreenDebugMessage(1, 2.0f, FColor::Green, TEXT("Item Interacted with."));
     }
 }
 
