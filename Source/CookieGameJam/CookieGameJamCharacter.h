@@ -132,5 +132,9 @@ public:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	USceneComponent* HoldLocationComponent;
+	
+	//Reward
+	UFUNCTION(BlueprintImplementableEvent, Category="Gameplay")
+	void AddCash(float Amount);
 };
 

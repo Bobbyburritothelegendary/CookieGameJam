@@ -2,8 +2,11 @@
 
 
 #include "AGarryActor.h"
+
+#include "CookieGameJamCharacter.h"
 #include "Engine/Engine.h"
 #include "Engine/DataTable.h"
+#include "Kismet/GameplayStatics.h"
 
 
 AAGarryActor::AAGarryActor()
@@ -29,8 +32,19 @@ void AAGarryActor::Interact(AActor* Interactor, AAInteractableBase* HeldItem)
 
 	if (HeldItem && HeldItem->ItemID == CurrentOrder.ItemID)
 	{
+		
+		//Destroy Item and reward Player
 		HeldItem->Destroy();
-		Say(FString::Printf(TEXT("Nice! Here's $%d"), CurrentOrder.Reward));
+		Say(FString::Printf(TEXT("Nice! Here's $%.2f"), CurrentOrder.Reward));
+		
+		ACookieGameJamCharacter* MyCharacter = Cast<ACookieGameJamCharacter>(Interactor);
+		
+		if (MyCharacter)
+		{
+			MyCharacter->AddCash(CurrentOrder.Reward);
+		}
+		
+		
 		bHasOrder = false;
 		return;
 	}

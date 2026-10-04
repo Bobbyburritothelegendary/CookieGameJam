@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
+#include "GameFramework/Actor.h"
 #include "GarryItemRow.generated.h"
 
 USTRUCT(BlueprintType)
@@ -19,7 +20,7 @@ struct FGarryItemRow : public FTableRowBase
 	TSoftClassPtr<AActor> ObjectClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 Reward = 10;
+	float Reward = 10;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float Weight = 100.f; //Larger number means more common
