@@ -6,6 +6,7 @@
 #include "CookieGameJamCharacter.h"
 #include "Engine/Engine.h"
 #include "Engine/DataTable.h"
+#include "TimerManager.h"
 #include "Kismet/GameplayStatics.h"
 
 
@@ -20,7 +21,13 @@ void AAGarryActor::Interact(AActor* Interactor, AAInteractableBase* HeldItem)
 	{
 		if (PickRandomItem(CurrentOrder))
 		{
+			if (OrderTimeLimit > 0.f)
+			{
+				GetWorldTimerManager().SetTimer(OrderTimerHandle, this, &AAGarryActor::OnOrderTimeout, OrderTimeLimit, false);
+			}
+			
 			bHasOrder = true;
+			
 			Say(FString::Printf(TEXT("Bring me a %s"), *CurrentOrder.DisplayName.ToString()));
 		}
 		else
@@ -35,6 +42,7 @@ void AAGarryActor::Interact(AActor* Interactor, AAInteractableBase* HeldItem)
 		
 		//Destroy Item and reward Player
 		HeldItem->Destroy();
+		GetWorldTimerManager().ClearTimer(OrderTimerHandle);
 		Say(FString::Printf(TEXT("Nice! Here's $%.2f"), CurrentOrder.Reward));
 		
 		ACookieGameJamCharacter* MyCharacter = Cast<ACookieGameJamCharacter>(Interactor);
@@ -58,6 +66,24 @@ void AAGarryActor::Say(const FString& Message)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Yellow, Message);
 	}
+}
+
+void AAGarryActor::OnOrderTimeout()
+{
+	bHasOrder = false;
+	Say(TEXT("Too slow! Forget it."));
+}
+
+//HELPER FUNCTIONS
+
+float AAGarryActor::GetTimeRemaining() const
+{
+	return GetWorldTimerManager().GetTimerRemaining(OrderTimerHandle);
+}
+
+FString AAGarryActor::GetCurrentOrder() const
+{
+	return CurrentOrder.DisplayName.ToString();
 }
  
 bool AAGarryActor::PickRandomItem(FGarryItemRow& OutRow)

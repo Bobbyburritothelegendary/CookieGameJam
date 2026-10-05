@@ -26,14 +26,24 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Orders")
 	bool bHasOrder = false;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Orders")
+	float OrderTimeLimit = 60.f;
 
 	bool PickRandomItem(FGarryItemRow& OutRow);
 	void Say(const FString& Message);
+	void OnOrderTimeout();
 	
-	
+	FTimerHandle OrderTimerHandle;
 	
 public:
 	AAGarryActor();
+	
+	UFUNCTION(BlueprintCallable, Category = "Orders")
+	float GetTimeRemaining() const;
+	
+	UFUNCTION(BlueprintCallable, Category = "Orders")
+	FString GetCurrentOrder() const;
 	
 	virtual void Interact(AActor* Interactor, AAInteractableBase* HeldItem) override;
 	

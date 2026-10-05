@@ -120,7 +120,7 @@ public:
 	
 	//GameplayVariables
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gameplay")
-	float InteractRange = 1000.0f;
+	float InteractRange = 500.0f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Gameplay")
 	bool bDrawDebugLine = false;
