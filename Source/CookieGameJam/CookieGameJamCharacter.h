@@ -12,7 +12,9 @@ class UInputComponent;
 class USkeletalMeshComponent;
 class UCameraComponent;
 class UInputAction;
+class AAComputer;
 struct FInputActionValue;
+
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
@@ -63,6 +65,12 @@ protected:
 	
 	UPROPERTY(EditAnywhere, Category ="Input")
 	class UInputAction* TalkAction;
+	
+	UPROPERTY(EditAnywhere, Category ="Input")
+	class UInputAction* ExitAction;
+
+	UFUNCTION(BlueprintCallable, Category="Input")
+	virtual void ExitInteract();
 	
 	
 	UFUNCTION()
@@ -132,6 +140,9 @@ public:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	USceneComponent* HoldLocationComponent;
+	
+	UPROPERTY()
+	AAComputer* ActiveComputer;
 	
 	//Reward
 	UFUNCTION(BlueprintImplementableEvent, Category="Gameplay")

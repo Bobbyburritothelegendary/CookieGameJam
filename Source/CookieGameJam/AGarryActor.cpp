@@ -3,115 +3,280 @@
 
 #include "AGarryActor.h"
 
+#include "Camera/PlayerCameraManager.h"
+#include "Components/TextRenderComponent.h"
 #include "CookieGameJamCharacter.h"
 #include "Engine/Engine.h"
 #include "Engine/DataTable.h"
-#include "TimerManager.h"
+#include "Engine/Engine.h"
 #include "Kismet/GameplayStatics.h"
-
+#include "Kismet/KismetMathLibrary.h"
+#include "Sound/SoundBase.h"
+#include "Sound/SoundAttenuation.h"
+#include "TimerManager.h"
 
 AAGarryActor::AAGarryActor()
 {
-	PromptText = FString("[F] Talk");
+    PrimaryActorTick.bCanEverTick = true;
+    PromptText = FString("[F] Talk");
+
+    SpeechText = CreateDefaultSubobject<UTextRenderComponent>(TEXT("SpeechText"));
+    SpeechText->SetupAttachment(RootComponent);
+    SpeechText->SetRelativeLocation(FVector(0.f, 0.f, 150.f));
+    SpeechText->SetHorizontalAlignment(EHTA_Center);
+    SpeechText->SetVerticalAlignment(EVRTA_TextBottom);
+    SpeechText->SetWorldSize(24.f);
+    SpeechText->SetText(FText::GetEmpty());
+}
+
+void AAGarryActor::BeginPlay()
+{
+    Super::BeginPlay();
+    ScheduleIdleLine();
+}
+
+void AAGarryActor::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
+
+    if (FullText.IsEmpty()) return;
+
+    APlayerCameraManager* Camera = UGameplayStatics::GetPlayerCameraManager(this, 0);
+    if (!Camera) return;
+
+    const FRotator Look = UKismetMathLibrary::FindLookAtRotation(SpeechText->GetComponentLocation(), Camera->GetCameraLocation());
+    SpeechText->SetWorldRotation(FRotator(0.f, Look.Yaw, 0.f));
 }
 
 void AAGarryActor::Interact(AActor* Interactor, AAInteractableBase* HeldItem)
 {
-	if (!bHasOrder)
-	{
-		if (PickRandomItem(CurrentOrder))
-		{
-			if (OrderTimeLimit > 0.f)
-			{
-				GetWorldTimerManager().SetTimer(OrderTimerHandle, this, &AAGarryActor::OnOrderTimeout, OrderTimeLimit, false);
-			}
-			
-			bHasOrder = true;
-			
-			Say(FString::Printf(TEXT("Bring me a %s"), *CurrentOrder.DisplayName.ToString()));
-		}
-		else
-		{
-			Say(TEXT("Garry has no item table assigned."));
-		}
-		return;
-	}
+    if (!bHasOrder)
+    {
+       if (PickRandomItem(CurrentOrder))
+       {
+          if (OrderTimeLimit > 0.f)
+          {
+             GetWorldTimerManager().SetTimer(OrderTimerHandle, this, &AAGarryActor::OnOrderTimeout, OrderTimeLimit, false);
+          }
 
-	if (HeldItem && HeldItem->ItemID == CurrentOrder.ItemID)
-	{
-		
-		//Destroy Item and reward Player
-		HeldItem->Destroy();
-		GetWorldTimerManager().ClearTimer(OrderTimerHandle);
-		Say(FString::Printf(TEXT("Nice! Here's $%.2f"), CurrentOrder.Reward));
-		
-		ACookieGameJamCharacter* MyCharacter = Cast<ACookieGameJamCharacter>(Interactor);
-		
-		if (MyCharacter)
-		{
-			MyCharacter->AddCash(CurrentOrder.Reward);
-		}
-		
-		
-		bHasOrder = false;
-		return;
-	}
+          bHasOrder = true;
 
-	Say(FString::Printf(TEXT("I still want a %s"), *CurrentOrder.DisplayName.ToString()));
+          Speak(PickLine(EGarryLineType::Request, CurrentOrder.ItemID, TEXT("Bring me a {Item}")));
+       }
+       else
+       {
+          Say(TEXT("Garry has no item table assigned."));
+       }
+       return;
+    }
+
+    if (HeldItem && HeldItem->ItemID == CurrentOrder.ItemID)
+    {
+
+       //Destroy Item and reward Player
+       HeldItem->Destroy();
+       GetWorldTimerManager().ClearTimer(OrderTimerHandle);
+    	Speak(PickLine(EGarryLineType::Complete, CurrentOrder.ItemID, TEXT("Nice! Here's ${Reward}")), CompleteSound);
+
+       ACookieGameJamCharacter* MyCharacter = Cast<ACookieGameJamCharacter>(Interactor);
+
+       if (MyCharacter)
+       {
+          MyCharacter->AddCash(CurrentOrder.Reward);
+       }
+
+       bHasOrder = false;
+       return;
+    }
+
+	Speak(PickLine(EGarryLineType::Reminder, CurrentOrder.ItemID, TEXT("I still want a {Item}")), WrongSound);
 }
 
 void AAGarryActor::Say(const FString& Message)
 {
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Yellow, Message);
-	}
+    if (GEngine)
+    {
+       GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Yellow, Message);
+    }
 }
 
 void AAGarryActor::OnOrderTimeout()
 {
-	bHasOrder = false;
-	Say(TEXT("Too slow! Forget it."));
+    bHasOrder = false;
+    Speak(PickLine(EGarryLineType::Timeout, CurrentOrder.ItemID, TEXT("Too slow! Forget it.")));
+}
+
+FString AAGarryActor::PickLine(EGarryLineType Type, FName InItemID, const FString& Fallback) const
+{
+    FString Result = Fallback;
+
+    if (LineTable)
+    {
+       TArray<FGarryLineRow*> Rows;
+       LineTable->GetAllRows<FGarryLineRow>(TEXT("PickLine"), Rows);
+
+       TArray<const FGarryLineRow*> Specific;
+       TArray<const FGarryLineRow*> Generic;
+
+       for (const FGarryLineRow* Row : Rows)
+       {
+          if (Row->Type != Type) continue;
+
+       	if (!InItemID.IsNone() && Row->ItemID == InItemID)
+          {
+             Specific.Add(Row);
+          }
+          else if (Row->ItemID.IsNone())
+          {
+             Generic.Add(Row);
+          }
+       }
+
+       const TArray<const FGarryLineRow*>& Pool = Specific.Num() > 0 ? Specific : Generic;
+       if (Pool.Num() > 0)
+       {
+          Result = Pool[FMath::RandRange(0, Pool.Num() - 1)]->Line;
+       }
+    }
+
+    Result = Result.Replace(TEXT("{Item}"), *CurrentOrder.DisplayName.ToString());
+    Result = Result.Replace(TEXT("{Reward}"), *FString::Printf(TEXT("%.0f"), CurrentOrder.Reward));
+    return Result;
+}
+
+void AAGarryActor::Speak(const FString& Text, USoundBase* OneShotSound)
+{
+	FTimerManager& TM = GetWorldTimerManager();
+	TM.ClearTimer(TypeTimerHandle);
+	TM.ClearTimer(ClearTimerHandle);
+
+	FullText = Text;
+	VisibleChars = 0;
+	SpeechText->SetText(FText::GetEmpty());
+
+	if (FullText.IsEmpty()) return;
+
+	bUseTalkSounds = (OneShotSound == nullptr);
+	if (OneShotSound)
+	{
+		PlaySpeechSound(OneShotSound);
+	}
+
+	TM.SetTimer(TypeTimerHandle, this, &AAGarryActor::TypeNextCharacter, FMath::Max(CharInterval, 0.01f), true);
+}
+
+void AAGarryActor::TypeNextCharacter()
+{
+	VisibleChars++;
+	SpeechText->SetText(FText::FromString(FullText.Left(VisibleChars)));
+
+	const bool bIsLetter = !FChar::IsWhitespace(FullText[VisibleChars - 1]);
+	if (bUseTalkSounds && bIsLetter && TalkSounds.Num() > 0 && VisibleChars % FMath::Max(CharsPerMumble, 1) == 0)
+	{
+		PlaySpeechSound(TalkSounds[FMath::RandRange(0, TalkSounds.Num() - 1)]);
+	}
+
+	if (VisibleChars >= FullText.Len())
+	{
+		GetWorldTimerManager().ClearTimer(TypeTimerHandle);
+		GetWorldTimerManager().SetTimer(ClearTimerHandle, this, &AAGarryActor::ClearSpeech, FMath::Max(LineHoldTime, 0.1f), false);
+	}
+}
+
+void AAGarryActor::PlaySpeechSound(USoundBase* Sound, bool bFitToInterval)
+{
+	if (!Sound) return;
+
+	float Pitch = FMath::FRandRange(0.9f, 1.1f);
+
+	if (bFitToInterval)
+	{
+		const float Interval = FMath::Max(CharInterval, 0.01f) * FMath::Max(CharsPerMumble, 1);
+		const float Duration = Sound->GetDuration();
+		if (Duration > Interval && Duration < 100.f)
+		{
+			Pitch *= FMath::Min(Duration / Interval, MaxTalkSpeedUp);
+		}
+	}
+
+	Pitch = FMath::Clamp(Pitch, 0.5f, 4.f);
+
+	UGameplayStatics::PlaySoundAtLocation(this, Sound, GetActorLocation(), 1.f, Pitch, 0.f, SpeechAttenuation);
+}
+
+void AAGarryActor::ClearSpeech()
+{
+    FullText.Empty();
+    VisibleChars = 0;
+    SpeechText->SetText(FText::GetEmpty());
+}
+
+void AAGarryActor::ScheduleIdleLine()
+{
+    if (IdleDelayMax <= 0.f) return;
+
+    const float Delay = FMath::Max(FMath::FRandRange(IdleDelayMin, IdleDelayMax), 1.f);
+    GetWorldTimerManager().SetTimer(IdleTimerHandle, this, &AAGarryActor::SayIdleLine, Delay, false);
+}
+
+void AAGarryActor::SayIdleLine()
+{
+    FTimerManager& TM = GetWorldTimerManager();
+    const bool bBusy = TM.IsTimerActive(TypeTimerHandle) || TM.IsTimerActive(ClearTimerHandle);
+
+    APawn* Player = UGameplayStatics::GetPlayerPawn(this, 0);
+    const bool bNear = Player && FVector::Dist(Player->GetActorLocation(), GetActorLocation()) <= IdleHearRange;
+
+    if (!bBusy && bNear)
+    {
+       const FString Line = PickLine(EGarryLineType::Idle, NAME_None, FString());
+       if (!Line.IsEmpty())
+       {
+          Speak(Line);
+       }
+    }
+
+    ScheduleIdleLine();
 }
 
 //HELPER FUNCTIONS
 
 float AAGarryActor::GetTimeRemaining() const
 {
-	return GetWorldTimerManager().GetTimerRemaining(OrderTimerHandle);
+    return GetWorldTimerManager().GetTimerRemaining(OrderTimerHandle);
 }
 
 FString AAGarryActor::GetCurrentOrder() const
 {
-	return CurrentOrder.DisplayName.ToString();
+    return CurrentOrder.DisplayName.ToString();
 }
- 
+
 bool AAGarryActor::PickRandomItem(FGarryItemRow& OutRow)
 {
-	if (!ItemTable) return false;
+    if (!ItemTable) return false;
 
-	TArray<FGarryItemRow*> Rows;
-	ItemTable->GetAllRows<FGarryItemRow>(TEXT("PickRandomItem"), Rows);
-	if (Rows.Num() == 0) return false;
+    TArray<FGarryItemRow*> Rows;
+    ItemTable->GetAllRows<FGarryItemRow>(TEXT("PickRandomItem"), Rows);
+    if (Rows.Num() == 0) return false;
 
-	float Total = 0.f;
-	for (const FGarryItemRow* Row : Rows)
-	{
-		Total += Row->Weight;
-	}
-	if (Total <= 0.f) return false;
+    float Total = 0.f;
+    for (const FGarryItemRow* Row : Rows)
+    {
+       Total += Row->Weight;
+    }
+    if (Total <= 0.f) return false;
 
-	float Roll = FMath::FRandRange(0.f, Total);
-	for (const FGarryItemRow* Row : Rows)
-	{
-		Roll -= Row->Weight;
-		if (Roll < 0.f)
-		{
-			OutRow = *Row;
-			return true;
-		}
-	}
+    float Roll = FMath::FRandRange(0.f, Total);
+    for (const FGarryItemRow* Row : Rows)
+    {
+       Roll -= Row->Weight;
+       if (Roll < 0.f)
+       {
+          OutRow = *Row;
+          return true;
+       }
+    }
 
-	OutRow = *Rows.Last();
-	return true;
+    OutRow = *Rows.Last();
+    return true;
 }

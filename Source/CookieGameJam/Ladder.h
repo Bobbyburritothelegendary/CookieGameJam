@@ -13,6 +13,7 @@ UCLASS()
 class COOKIEGAMEJAM_API ALadder : public AAInteractableBase
 {
 	GENERATED_BODY()
+	
 public:
 	
 	virtual void Interact(AActor* Interactor, AAInteractableBase* HeldItem) override;

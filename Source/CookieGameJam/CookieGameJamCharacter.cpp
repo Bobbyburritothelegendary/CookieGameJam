@@ -4,6 +4,7 @@
 #include "CookieGameJamCharacter.h"
 
 #include "AGarryActor.h"
+#include "AComputer.h"
 #include "Animation/AnimInstance.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -61,6 +62,14 @@ void ACookieGameJamCharacter::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	
 	if (!FirstPersonCameraComponent || !GetWorld()) return;
+	
+	if (ActiveComputer != nullptr)
+	{
+		DisplayInteractText(FString(""));
+		CurrentInteractable = nullptr;
+		return;
+	}
+	
 	
 	//Find Interactables using raycast
 	FVector ForwardVector = FirstPersonCameraComponent->GetForwardVector();
@@ -161,6 +170,12 @@ void ACookieGameJamCharacter::Tick(float DeltaTime)
 //Gameplay 
 void ACookieGameJamCharacter::Interact()
 {
+	if (ActiveComputer)
+	{
+		DisplayInteractText(FString(""));
+		return;
+	}
+	
 	if (!HeldItem)
 	{
 		if (CurrentInteractable)
@@ -192,6 +207,14 @@ void ACookieGameJamCharacter::TalkInteract()
 	if (CurrentInteractable)
 	{
 		CurrentInteractable->Interact(this, HeldItem);
+	}
+}
+
+void ACookieGameJamCharacter::ExitInteract()
+{
+	if (ActiveComputer)
+	{
+		ActiveComputer->ExitComputer();
 	}
 }
 
@@ -232,6 +255,7 @@ void ACookieGameJamCharacter::SetupPlayerInputComponent(UInputComponent* PlayerI
 		//Interactions
 		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &ACookieGameJamCharacter::Interact);
 		EnhancedInputComponent->BindAction(TalkAction, ETriggerEvent::Started, this, &ACookieGameJamCharacter::TalkInteract);
+		EnhancedInputComponent->BindAction(ExitAction, ETriggerEvent::Started, this, &ACookieGameJamCharacter::ExitInteract);
 		
 	}
 	else

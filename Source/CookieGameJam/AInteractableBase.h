@@ -6,6 +6,10 @@
 #include "GameFramework/Actor.h"
 #include "AInteractableBase.generated.h"
 
+
+class UStaticMesh;
+class USoundBase;
+
 UCLASS()
 class COOKIEGAMEJAM_API AAInteractableBase : public AActor
 {
@@ -49,4 +53,17 @@ public:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
 	FName ItemID;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction")
+    UStaticMesh* ItemMesh;
+    
+    virtual void OnConstruction(const FTransform& Transform) override;
+	
+	
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interactable|Audio")
+	USoundBase* PickupSound;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interactable|Audio")
+	USoundBase* DropSound;
 };

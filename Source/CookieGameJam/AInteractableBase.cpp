@@ -3,7 +3,10 @@
 #include "AInteractableBase.h"
 
 #include "Components/StaticMeshComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "Engine/Engine.h"
+#include "Sound/SoundBase.h"
+#include "UObject/ConstructorHelpers.h"
 
 // Sets default values
 AAInteractableBase::AAInteractableBase()
@@ -16,6 +19,12 @@ AAInteractableBase::AAInteractableBase()
     PromptText = FString("[E] Pick Up"); //Default Interact Prompt
     bIsPickedUp = false;
     bCanBePickedUp = true;
+    
+    static ConstructorHelpers::FObjectFinder<USoundBase> PickupSoundFinder(TEXT("/Engine/VREditor/Sounds/UI/Object_PickUp.Object_PickUp"));
+    if (PickupSoundFinder.Succeeded())
+    {
+        PickupSound = PickupSoundFinder.Object;
+    }
 }
 
 // Called when the game starts or when spawned
@@ -43,6 +52,11 @@ void AAInteractableBase::Pickup(USceneComponent* AttachToComp)
     if (!AttachToComp || bIsPickedUp) return;
 
     bIsPickedUp = true;
+    
+    if (PickupSound)
+    {
+        UGameplayStatics::PlaySoundAtLocation(this, PickupSound, GetActorLocation());
+    }
 
     TArray<UPrimitiveComponent*> PrimitiveComps;
     GetComponents<UPrimitiveComponent>(PrimitiveComps);
@@ -79,9 +93,24 @@ void AAInteractableBase::Drop()
     }
 
     bIsPickedUp = false;
+    
+    if (DropSound)
+    {
+        UGameplayStatics::PlaySoundAtLocation(this, DropSound, GetActorLocation());
+    }
 }
 
 FString AAInteractableBase::GetPromptText()
 {
     return PromptText;
+}
+
+void AAInteractableBase::OnConstruction(const FTransform& Transform)
+{
+    Super::OnConstruction(Transform);
+
+    if (ItemMesh)
+    {
+        StaticMeshComp->SetStaticMesh(ItemMesh);
+    }
 }
