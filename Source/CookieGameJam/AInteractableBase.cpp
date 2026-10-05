@@ -74,7 +74,7 @@ void AAInteractableBase::Drop()
 
     for (UPrimitiveComponent* PrimComp : PrimitiveComps)
     {
-        PrimComp->SetCollisionProfileName(TEXT("PhysicsActor"));
+        PrimComp->SetCollisionProfileName(TEXT("Pickup"));
         PrimComp->SetSimulatePhysics(true);
     }
 
