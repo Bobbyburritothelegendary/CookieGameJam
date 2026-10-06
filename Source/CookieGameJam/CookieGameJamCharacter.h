@@ -147,5 +147,19 @@ public:
 	//Reward
 	UFUNCTION(BlueprintImplementableEvent, Category="Gameplay")
 	void AddCash(float Amount);
+	
+	
+	//Upgrade
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Upgrades")
+	int32 PayRiseLevel = 1;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Upgrades")
+	int32 TimeLevel = 1;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Upgrades")
+	float PayBonusPerLevel = 0.25f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Upgrades")
+	float TimeBonusPerLevel = 10.f;
 };
 

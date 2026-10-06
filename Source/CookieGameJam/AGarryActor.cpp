@@ -50,44 +50,49 @@ void AAGarryActor::Tick(float DeltaTime)
 
 void AAGarryActor::Interact(AActor* Interactor, AAInteractableBase* HeldItem)
 {
-    if (!bHasOrder)
-    {
-       if (PickRandomItem(CurrentOrder))
-       {
-          if (OrderTimeLimit > 0.f)
-          {
-             GetWorldTimerManager().SetTimer(OrderTimerHandle, this, &AAGarryActor::OnOrderTimeout, OrderTimeLimit, false);
-          }
+	ACookieGameJamCharacter* MyCharacter = Cast<ACookieGameJamCharacter>(Interactor);
 
-          bHasOrder = true;
+	if (!bHasOrder)
+	{
+		if (PickRandomItem(CurrentOrder))
+		{
+			if (OrderTimeLimit > 0.f)
+			{
+				float TimeLimit = OrderTimeLimit;
+				if (MyCharacter)
+				{
+					TimeLimit += (MyCharacter->TimeLevel - 1) * MyCharacter->TimeBonusPerLevel;
+				}
+				GetWorldTimerManager().SetTimer(OrderTimerHandle, this, &AAGarryActor::OnOrderTimeout, TimeLimit, false);
+			}
 
-          Speak(PickLine(EGarryLineType::Request, CurrentOrder.ItemID, TEXT("Bring me a {Item}")));
-       }
-       else
-       {
-          Say(TEXT("Garry has no item table assigned."));
-       }
-       return;
-    }
+			bHasOrder = true;
 
-    if (HeldItem && HeldItem->ItemID == CurrentOrder.ItemID)
-    {
+			Speak(PickLine(EGarryLineType::Request, CurrentOrder.ItemID, TEXT("Bring me a {Item}")));
+		}
+		else
+		{
+			Say(TEXT("Garry has no item table assigned."));
+		}
+		return;
+	}
 
-       //Destroy Item and reward Player
-       HeldItem->Destroy();
-       GetWorldTimerManager().ClearTimer(OrderTimerHandle);
-    	Speak(PickLine(EGarryLineType::Complete, CurrentOrder.ItemID, TEXT("Nice! Here's ${Reward}")), CompleteSound);
+	if (HeldItem && HeldItem->ItemID == CurrentOrder.ItemID)
+	{
+		if (MyCharacter)
+		{
+			CurrentOrder.Reward *= 1.f + (MyCharacter->PayRiseLevel - 1) * MyCharacter->PayBonusPerLevel;
+			MyCharacter->AddCash(CurrentOrder.Reward);
+		}
 
-       ACookieGameJamCharacter* MyCharacter = Cast<ACookieGameJamCharacter>(Interactor);
+		//Destroy Item and reward Player
+		HeldItem->Destroy();
+		GetWorldTimerManager().ClearTimer(OrderTimerHandle);
+		Speak(PickLine(EGarryLineType::Complete, CurrentOrder.ItemID, TEXT("Nice! Here's ${Reward}")), CompleteSound);
 
-       if (MyCharacter)
-       {
-          MyCharacter->AddCash(CurrentOrder.Reward);
-       }
-
-       bHasOrder = false;
-       return;
-    }
+		bHasOrder = false;
+		return;
+	}
 
 	Speak(PickLine(EGarryLineType::Reminder, CurrentOrder.ItemID, TEXT("I still want a {Item}")), WrongSound);
 }
@@ -104,6 +109,16 @@ void AAGarryActor::OnOrderTimeout()
 {
     bHasOrder = false;
     Speak(PickLine(EGarryLineType::Timeout, CurrentOrder.ItemID, TEXT("Too slow! Forget it.")));
+}
+
+bool AAGarryActor::SkipOrder(AActor* Interactor)
+{
+	if (!bHasOrder) return false;
+
+	GetWorldTimerManager().ClearTimer(OrderTimerHandle);
+	bHasOrder = false;
+	//
+	return true;
 }
 
 FString AAGarryActor::PickLine(EGarryLineType Type, FName InItemID, const FString& Fallback) const
@@ -253,30 +268,45 @@ FString AAGarryActor::GetCurrentOrder() const
 
 bool AAGarryActor::PickRandomItem(FGarryItemRow& OutRow)
 {
-    if (!ItemTable) return false;
+	if (!ItemTable) return false;
 
-    TArray<FGarryItemRow*> Rows;
-    ItemTable->GetAllRows<FGarryItemRow>(TEXT("PickRandomItem"), Rows);
-    if (Rows.Num() == 0) return false;
+	TArray<FGarryItemRow*> AllRows;
+	ItemTable->GetAllRows<FGarryItemRow>(TEXT("PickRandomItem"), AllRows);
+	if (AllRows.Num() == 0) return false;
 
-    float Total = 0.f;
-    for (const FGarryItemRow* Row : Rows)
-    {
-       Total += Row->Weight;
-    }
-    if (Total <= 0.f) return false;
+	const FName PreviousID = OutRow.ItemID;
 
-    float Roll = FMath::FRandRange(0.f, Total);
-    for (const FGarryItemRow* Row : Rows)
-    {
-       Roll -= Row->Weight;
-       if (Roll < 0.f)
-       {
-          OutRow = *Row;
-          return true;
-       }
-    }
+	TArray<FGarryItemRow*> Rows;
+	for (FGarryItemRow* Row : AllRows)
+	{
+		if (AllRows.Num() == 1 || Row->ItemID != PreviousID)
+		{
+			Rows.Add(Row);
+		}
+	}
+	if (Rows.Num() == 0)
+	{
+		Rows = AllRows;
+	}
 
-    OutRow = *Rows.Last();
-    return true;
+	float Total = 0.f;
+	for (const FGarryItemRow* Row : Rows)
+	{
+		Total += Row->Weight;
+	}
+	if (Total <= 0.f) return false;
+
+	float Roll = FMath::FRandRange(0.f, Total);
+	for (const FGarryItemRow* Row : Rows)
+	{
+		Roll -= Row->Weight;
+		if (Roll < 0.f)
+		{
+			OutRow = *Row;
+			return true;
+		}
+	}
+
+	OutRow = *Rows.Last();
+	return true;
 }

@@ -99,6 +99,9 @@ protected:
 
 public:
     AAGarryActor();
+    
+    UFUNCTION(BlueprintCallable, Category = "Orders")
+    bool SkipOrder(AActor* Interactor);
 
     virtual void Tick(float DeltaTime) override;
 
