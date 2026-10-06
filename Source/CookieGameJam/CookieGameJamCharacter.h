@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
 #include "AInteractableBase.h"
+#include "Kismet/GameplayStatics.h"
 #include "CookieGameJamCharacter.generated.h"
 
 class UInputComponent;
@@ -15,8 +16,17 @@ class UInputAction;
 class AAComputer;
 struct FInputActionValue;
 
-
+class USoundBase;
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
+
+USTRUCT(BlueprintType)
+struct FFootstepSet
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    TArray<USoundBase*> Sounds;
+};
 
 /**
  *  A basic first person character
@@ -40,6 +50,11 @@ class ACookieGameJamCharacter : public ACharacter
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Interaction", meta = (AllowPrivateAccess = "true"))
 	AAInteractableBase* HeldItem;
+	
+private:
+	float DistanceTraveled = 0.0f;
+	
+	int32 FootstepIndex = 0;
 
 protected:
 
@@ -72,6 +87,18 @@ protected:
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void ExitInteract();
 	
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+    TMap<TEnumAsByte<EPhysicalSurface>, FFootstepSet> FootstepSounds;
+    
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+    FFootstepSet DefaultFootsteps;
+    
+    void PlayFootstep();
+
+	/** Distance traveled in cm between footstep sounds (Default: ~150-180cm) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
+	float DistancePerFootstep = 160.0f;
 	
 	UFUNCTION()
 	void OnHeldItemDestroyed(AActor* DestroyedActor);

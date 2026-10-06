@@ -165,6 +165,30 @@ void ACookieGameJamCharacter::Tick(float DeltaTime)
 			DisplayInteractText(FString(""));
 		}
 	}
+	
+	//Footstep Sounds
+	if (GetCharacterMovement() && GetCharacterMovement()->IsMovingOnGround())
+	{
+		// Calculate actual 2D velocity (ignoring Z movement like jumping/falling)
+		FVector Velocity = GetVelocity();
+		Velocity.Z = 0.0f;
+		float Speed = Velocity.Size();
+
+		if (Speed > 10.0f) // Character is moving
+		{
+			DistanceTraveled += Speed * DeltaTime;
+
+			if (DistanceTraveled >= DistancePerFootstep)
+            {
+                DistanceTraveled = 0.0f;
+                PlayFootstep();
+            }
+		}
+	}
+	else
+	{
+		DistanceTraveled = 0.0f; // Reset when in air or stopped
+	}
 }
 
 //Gameplay 
@@ -230,6 +254,42 @@ void ACookieGameJamCharacter::OnHeldItemDestroyed(AActor* DestroyedActor)
 		{
 			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Orange, TEXT("Held item was destroyed!"));
 		}
+	}
+}
+
+void ACookieGameJamCharacter::PlayFootstep()
+{
+	const float HalfHeight = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+	const FVector Start = GetActorLocation();
+	const FVector End = Start - FVector(0.f, 0.f, HalfHeight + 50.f);
+
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+	Params.bReturnPhysicalMaterial = true;
+	Params.bTraceComplex = true;
+
+	EPhysicalSurface Surface = SurfaceType_Default;
+
+	FHitResult Hit;
+	if (GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params))
+	{
+		Surface = UGameplayStatics::GetSurfaceType(Hit);
+	}
+
+	const FFootstepSet* Set = FootstepSounds.Find(Surface);
+	if (!Set || Set->Sounds.Num() == 0)
+	{
+		Set = &DefaultFootsteps;
+	}
+	if (Set->Sounds.Num() == 0) return;
+
+	USoundBase* Sound = Set->Sounds[FootstepIndex % Set->Sounds.Num()];
+	FootstepIndex++;
+
+	if (Sound)
+	{
+		const FVector FeetLocation = Start - FVector(0.f, 0.f, HalfHeight);
+		UGameplayStatics::PlaySoundAtLocation(this, Sound, FeetLocation, FMath::FRandRange(0.8f, 1.f), FMath::FRandRange(0.95f, 1.05f));
 	}
 }
 
