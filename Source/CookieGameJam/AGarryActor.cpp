@@ -6,6 +6,7 @@
 #include "Camera/PlayerCameraManager.h"
 #include "Components/TextRenderComponent.h"
 #include "CookieGameJamCharacter.h"
+#include "CookieGameJamGameMode.h"
 #include "Engine/Engine.h"
 #include "Engine/DataTable.h"
 #include "Engine/Engine.h"
@@ -89,6 +90,17 @@ void AAGarryActor::Interact(AActor* Interactor, AAInteractableBase* HeldItem)
 		HeldItem->Destroy();
 		GetWorldTimerManager().ClearTimer(OrderTimerHandle);
 		Speak(PickLine(EGarryLineType::Complete, CurrentOrder.ItemID, TEXT("Nice! Here's ${Reward}")), CompleteSound);
+		
+		if (CompleteSound2)
+		{
+			UGameplayStatics::PlaySound2D(GetWorld(), CompleteSound2);
+		}
+		
+		AGameModeBase* GameMode = UGameplayStatics::GetGameMode(this);
+		if (ACookieGameJamGameMode* CustomGameMode = Cast<ACookieGameJamGameMode>(UGameplayStatics::GetGameMode(this)))
+		{
+			CustomGameMode->OnJobCompleted();
+		}
 
 		bHasOrder = false;
 		return;

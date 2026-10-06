@@ -12,6 +12,7 @@
 class UTextRenderComponent;
 class USoundBase;
 class USoundAttenuation;
+class AGameModeBase;
 
 /**
  * 
@@ -50,6 +51,9 @@ protected:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Speech")
     USoundBase* WrongSound;
+    
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Audio")
+    USoundBase* CompleteSound2;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Speech")
     float CharInterval = 0.04f;

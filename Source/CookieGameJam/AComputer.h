@@ -6,6 +6,7 @@
 
 class UCameraComponent;
 class UUserWidget;
+class USoundBase;
 class ACookieGameJamCharacter;
 
 UCLASS()
@@ -30,7 +31,10 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Computer")
 	float BlendTime = 0.5f;
-
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Audio")
+	USoundBase* StartupSound;
+    	
 	UPROPERTY()
 	UUserWidget* ScreenWidget;
 
@@ -40,5 +44,7 @@ protected:
 	void ShowScreen();
 	
 	FTimerHandle ShowScreenTimer;
+	
+	
 	
 };

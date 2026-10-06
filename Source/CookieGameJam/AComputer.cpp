@@ -25,7 +25,7 @@ void AAComputer::Interact(AActor* Interactor, AAInteractableBase* HeldItem)
 
     APlayerController* PC = Cast<APlayerController>(Player->GetController());
     if (!PC) return;
-
+ 
     ActivePlayer = Player;
     Player->ActiveComputer = this;
     Player->GetFirstPersonMesh()->SetVisibility(false);
@@ -36,6 +36,11 @@ void AAComputer::Interact(AActor* Interactor, AAInteractableBase* HeldItem)
 
     if (BlendTime > 0.f)
     {
+        if (StartupSound)
+        {
+            UGameplayStatics::PlaySound2D(GetWorld(), StartupSound);
+        }
+        
         GetWorldTimerManager().SetTimer(ShowScreenTimer, this, &AAComputer::ShowScreen, BlendTime, false);
     }
     else

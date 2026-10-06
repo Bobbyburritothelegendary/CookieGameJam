@@ -6,9 +6,8 @@
 #include "AInteractableBase.h"
 #include "Ladder.generated.h"
 
-/**
- * 
- */
+class USoundBase;
+
 UCLASS()
 class COOKIEGAMEJAM_API ALadder : public AAInteractableBase
 {
@@ -17,4 +16,9 @@ class COOKIEGAMEJAM_API ALadder : public AAInteractableBase
 public:
 	
 	virtual void Interact(AActor* Interactor, AAInteractableBase* HeldItem) override;
+
+protected:
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Audio", meta = (AllowPrivateAccess = "true"))
+	USoundBase* BoostSound;
 };
