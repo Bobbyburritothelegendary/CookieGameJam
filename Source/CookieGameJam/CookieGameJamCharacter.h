@@ -87,6 +87,16 @@ protected:
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void ExitInteract();
 	
+	//Radio
+	UPROPERTY(EditAnywhere, Category = "Input")
+	UInputAction* PrimaryAction; // Left Click
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	UInputAction* SecondaryAction; // Right Click
+
+	void OnPrimaryAction();
+	void OnSecondaryAction();
+	
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Audio")
     TMap<TEnumAsByte<EPhysicalSurface>, FFootstepSet> FootstepSounds;

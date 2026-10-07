@@ -41,10 +41,10 @@ void AAInteractableBase::Tick(float DeltaTime)
 
 void AAInteractableBase::Interact(AActor* Interactor, AAInteractableBase* HeldItem)
 {
-    if (GEngine)
-    {
-        GEngine->AddOnScreenDebugMessage(1, 2.0f, FColor::Green, TEXT("Item Interacted with."));
-    }
+    // if (GEngine)
+    // {
+    //     GEngine->AddOnScreenDebugMessage(1, 2.0f, FColor::Green, TEXT("Item Interacted with."));
+    // }
 }
 
 void AAInteractableBase::Pickup(USceneComponent* AttachToComp)

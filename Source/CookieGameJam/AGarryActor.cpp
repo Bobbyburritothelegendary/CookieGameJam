@@ -113,7 +113,7 @@ void AAGarryActor::Say(const FString& Message)
 {
     if (GEngine)
     {
-       GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Yellow, Message);
+       // GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Yellow, Message);
     }
 }
 

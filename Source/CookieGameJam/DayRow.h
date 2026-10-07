@@ -4,6 +4,8 @@
 #include "Engine/DataTable.h"
 #include "DayRow.generated.h"
 
+class USoundBase;
+
 USTRUCT(BlueprintType)
 struct FDayRow : public FTableRowBase
 {
@@ -20,4 +22,7 @@ struct FDayRow : public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FName NextLevel;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TArray<USoundBase*> Music;
 };

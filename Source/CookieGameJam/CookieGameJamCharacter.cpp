@@ -118,14 +118,14 @@ void ACookieGameJamCharacter::Tick(float DeltaTime)
 			if (HitInteractable)
 			{
 				CurrentInteractable = HitInteractable;
-				GEngine->AddOnScreenDebugMessage(1, 2.0f, FColor::Red, FString::Printf(TEXT("Hit Actor: %s"), *HitResult.GetActor()->GetName()));
+				// GEngine->AddOnScreenDebugMessage(1, 2.0f, FColor::Red, FString::Printf(TEXT("Hit Actor: %s"), *HitResult.GetActor()->GetName()));
 				
 				if (HeldItem)
 				{
 					if (HitInteractable->bCanBePickedUp == false)
 					{
 						FString PromptText = CurrentInteractable->GetPromptText();
-						GEngine->AddOnScreenDebugMessage(2, 2.0f, FColor::Red, PromptText);
+						// GEngine->AddOnScreenDebugMessage(2, 2.0f, FColor::Red, PromptText);
 						DisplayInteractText(PromptText);
 					}
 					else
@@ -136,7 +136,7 @@ void ACookieGameJamCharacter::Tick(float DeltaTime)
 				else
 				{
 					FString PromptText = CurrentInteractable->GetPromptText();
-					GEngine->AddOnScreenDebugMessage(2, 2.0f, FColor::Red, PromptText);
+					// GEngine->AddOnScreenDebugMessage(2, 2.0f, FColor::Red, PromptText);
 				
 					DisplayInteractText(PromptText);
 				}
@@ -144,7 +144,7 @@ void ACookieGameJamCharacter::Tick(float DeltaTime)
 			else
 			{
 				CurrentInteractable = nullptr;
-				GEngine->AddOnScreenDebugMessage(1, 2.0f, FColor::Green, TEXT("No Interactable Actors Hit."));
+				// GEngine->AddOnScreenDebugMessage(1, 2.0f, FColor::Green, TEXT("No Interactable Actors Hit."));
 				
 				if (HeldItem)
 				{
@@ -160,7 +160,7 @@ void ACookieGameJamCharacter::Tick(float DeltaTime)
 		else
 		{
 			CurrentInteractable = nullptr;
-			GEngine->AddOnScreenDebugMessage(1, 2.0f, FColor::Green, TEXT("Nothing hit."));
+			// GEngine->AddOnScreenDebugMessage(1, 2.0f, FColor::Green, TEXT("Nothing hit."));
 			
 			DisplayInteractText(FString(""));
 		}
@@ -250,10 +250,10 @@ void ACookieGameJamCharacter::OnHeldItemDestroyed(AActor* DestroyedActor)
 		
 		DisplayInteractText(FString(""));
         
-		if (GEngine)
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Orange, TEXT("Held item was destroyed!"));
-		}
+		// if (GEngine)
+		// {
+		// 	GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Orange, TEXT("Held item was destroyed!"));
+		// }
 	}
 }
 
@@ -293,6 +293,24 @@ void ACookieGameJamCharacter::PlayFootstep()
 	}
 }
 
+#include "Radio.h"
+
+void ACookieGameJamCharacter::OnPrimaryAction()
+{
+	if (ARadio* Radio = Cast<ARadio>(HeldItem))
+	{
+		Radio->PlayNextSong();
+	}
+}
+
+void ACookieGameJamCharacter::OnSecondaryAction()
+{
+	if (ARadio* Radio = Cast<ARadio>(HeldItem))
+	{
+		Radio->TogglePower();
+	}
+}
+
 
 
 //PlayerInput and movement
@@ -316,6 +334,9 @@ void ACookieGameJamCharacter::SetupPlayerInputComponent(UInputComponent* PlayerI
 		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &ACookieGameJamCharacter::Interact);
 		EnhancedInputComponent->BindAction(TalkAction, ETriggerEvent::Started, this, &ACookieGameJamCharacter::TalkInteract);
 		EnhancedInputComponent->BindAction(ExitAction, ETriggerEvent::Started, this, &ACookieGameJamCharacter::ExitInteract);
+		
+		EnhancedInputComponent->BindAction(PrimaryAction, ETriggerEvent::Started, this, &ACookieGameJamCharacter::OnPrimaryAction);
+		EnhancedInputComponent->BindAction(SecondaryAction, ETriggerEvent::Started, this, &ACookieGameJamCharacter::OnSecondaryAction);
 		
 	}
 	else
