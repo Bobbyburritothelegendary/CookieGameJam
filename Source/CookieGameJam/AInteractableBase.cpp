@@ -7,6 +7,8 @@
 #include "Engine/Engine.h"
 #include "Sound/SoundBase.h"
 #include "UObject/ConstructorHelpers.h"
+#include "GameFramework/Character.h"
+#include "Blueprint/UserWidget.h"
 
 // Sets default values
 AAInteractableBase::AAInteractableBase()
@@ -75,6 +77,17 @@ void AAInteractableBase::Pickup(USceneComponent* AttachToComp)
     );
 
     AttachToComponent(AttachToComp, AttachmentRules);
+    
+    ACharacter* PlayerChar = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
+    if (PlayerChar)
+    {
+        UFunction* UpdateFunc = PlayerChar->FindFunction(FName("UpdateHUDControls"));
+        if (UpdateFunc)
+        {
+            AAInteractableBase* ItemToPass = this;
+            PlayerChar->ProcessEvent(UpdateFunc, &ItemToPass);
+        }
+    }
 }
 
 void AAInteractableBase::Drop()
@@ -97,6 +110,17 @@ void AAInteractableBase::Drop()
     if (DropSound)
     {
         UGameplayStatics::PlaySoundAtLocation(this, DropSound, GetActorLocation());
+    }
+    
+    ACharacter* PlayerChar = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
+    if (PlayerChar)
+    {
+        UFunction* UpdateFunc = PlayerChar->FindFunction(FName("UpdateHUDControls"));
+        if (UpdateFunc)
+        {
+            AAInteractableBase* ItemToPass = nullptr; // Clear held item
+            PlayerChar->ProcessEvent(UpdateFunc, &ItemToPass);
+        }
     }
 }
 

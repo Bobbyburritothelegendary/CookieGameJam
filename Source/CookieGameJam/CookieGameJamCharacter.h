@@ -7,6 +7,7 @@
 #include "Logging/LogMacros.h"
 #include "AInteractableBase.h"
 #include "Kismet/GameplayStatics.h"
+#include "PlayerProgress.h"
 #include "CookieGameJamCharacter.generated.h"
 
 class UInputComponent;
@@ -156,6 +157,8 @@ protected:
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
 	
 public:
+	
+	virtual void BeginPlay() override;
 
 	/** Returns the first person mesh **/
 	USkeletalMeshComponent* GetFirstPersonMesh() const { return FirstPersonMesh; }
@@ -184,6 +187,16 @@ public:
 	//Reward
 	UFUNCTION(BlueprintImplementableEvent, Category="Gameplay")
 	void AddCash(float Amount);
+	
+	//Progress
+	UFUNCTION(BlueprintImplementableEvent, Category = "Economy")
+	void SetCashFromSave(float Amount);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Economy")
+	float GetCashForSave();
+
+	void ApplyProgress(const FPlayerProgress& Progress);
+	FPlayerProgress CaptureProgress();
 	
 	
 	//Upgrade

@@ -11,9 +11,11 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "EnhancedInputComponent.h"
 #include "InputActionValue.h"
+#include "CookieGameJamGameInstance.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "CookieGameJam.h"
 #include "DrawDebugHelpers.h"  
+#include "CookieGameJamGameInstance.h"
 #include "Engine/Engine.h"
 
 ACookieGameJamCharacter::ACookieGameJamCharacter()
@@ -311,6 +313,33 @@ void ACookieGameJamCharacter::OnSecondaryAction()
 	}
 }
 
+//Progress
+void ACookieGameJamCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (UCookieGameJamGameInstance* GI = Cast<UCookieGameJamGameInstance>(UGameplayStatics::GetGameInstance(this)))
+	{
+		ApplyProgress(GI->Progress);
+	}
+}
+
+void ACookieGameJamCharacter::ApplyProgress(const FPlayerProgress& Progress)
+{
+	PayRiseLevel = Progress.PayRiseLevel;
+	TimeLevel = Progress.TimeLevel;
+	SetCashFromSave(Progress.Cash);
+}
+
+FPlayerProgress ACookieGameJamCharacter::CaptureProgress()
+{
+	FPlayerProgress Progress;
+	Progress.Cash = GetCashForSave();
+	Progress.PayRiseLevel = PayRiseLevel;
+	Progress.TimeLevel = TimeLevel;
+	return Progress;
+}
+
 
 
 //PlayerInput and movement
@@ -370,9 +399,14 @@ void ACookieGameJamCharacter::DoAim(float Yaw, float Pitch)
 {
 	if (GetController())
 	{
-		// pass the rotation inputs
-		AddControllerYawInput(Yaw);
-		AddControllerPitchInput(Pitch);
+		float Sens = 1.0f;
+		if (UCookieGameJamGameInstance* GI = Cast<UCookieGameJamGameInstance>(GetGameInstance()))
+		{
+			Sens = GI->MouseSensitivity;
+		}
+
+		AddControllerYawInput(Yaw * Sens);
+		AddControllerPitchInput(Pitch * Sens);
 	}
 }
 

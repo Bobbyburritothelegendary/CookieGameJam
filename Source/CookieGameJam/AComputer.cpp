@@ -71,6 +71,10 @@ void AAComputer::ShowScreen()
     InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
     InputMode.SetHideCursorDuringCapture(false);
     PC->SetInputMode(InputMode);
+    
+    //Keybind UI
+    
+    
 }
 
 void AAComputer::ExitComputer()

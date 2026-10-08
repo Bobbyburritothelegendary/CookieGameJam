@@ -21,6 +21,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Radio")
 	void TogglePower();
+	
+	UFUNCTION(BlueprintCallable, Category = "Radio")
+	void PlayCurrentIndex();
 
 protected:
 	virtual void BeginPlay() override;
@@ -39,7 +42,6 @@ private:
 	int32 CurrentSongIndex = -1;
 
 	void SyncPlaylistFromGameMode();
-	void PlayCurrentIndex();
 	void StartRadio();
 
 	UFUNCTION()

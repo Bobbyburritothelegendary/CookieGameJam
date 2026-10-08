@@ -7,6 +7,7 @@
 #include "Engine/DataTable.h"
 #include "GarryItemRow.h"
 #include "GarryLineRow.h"
+#include "CookieGameJamCharacter.h"
 #include "AGarryActor.generated.h"
 
 class UTextRenderComponent;
@@ -24,6 +25,11 @@ class COOKIEGAMEJAM_API AAGarryActor : public AAInteractableBase
 
 protected:
     virtual void BeginPlay() override;
+    
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Garry Orders")
+    TSet<FName> RequestedRemotesThisLevel;
+	
+    bool IsRemoteItem(FName InItemID) const;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Orders")
     UDataTable* ItemTable;
@@ -82,6 +88,8 @@ protected:
     bool PickRandomItem(FGarryItemRow& OutRow);
     void Say(const FString& Message);
     void OnOrderTimeout();
+    void DelayedNextOrder();
+    void NewOrder(ACookieGameJamCharacter* MyCharacter);
 
     FString PickLine(EGarryLineType Type, FName InItemID, const FString& Fallback) const;
     void Speak(const FString& Text, USoundBase* OneShotSound = nullptr);
@@ -95,11 +103,14 @@ protected:
     FTimerHandle TypeTimerHandle;
     FTimerHandle ClearTimerHandle;
     FTimerHandle IdleTimerHandle;
+    FTimerHandle NextOrderTimerHandle;
 
     FString FullText;
     int32 VisibleChars = 0;
     
     bool bUseTalkSounds = true;
+    
+    
 
 public:
     AAGarryActor();
@@ -114,6 +125,9 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Orders")
     FString GetCurrentOrder() const;
+    
+    UFUNCTION(BlueprintCallable, Category = "Orders")
+    bool HasActiveOrder() const { return bHasOrder; }
 
     virtual void Interact(AActor* Interactor, AAInteractableBase* HeldItem) override;
     

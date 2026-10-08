@@ -1,5 +1,6 @@
 #include "Radio.h"
 #include "CookieGameJamGameMode.h"
+#include "CookieGameJamGameInstance.h"
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
 
@@ -156,28 +157,19 @@ void ARadio::TogglePower()
 
 void ARadio::PlayCurrentIndex()
 {
-    if (!CurrentPlaylist.IsValidIndex(CurrentSongIndex))
+    if (!CurrentPlaylist.IsValidIndex(CurrentSongIndex)) return;
+
+    USoundBase* SelectedSong = CurrentPlaylist[CurrentSongIndex];
+    if (!SelectedSong) return;
+
+    float FinalMusicVol = Volume;
+    if (UCookieGameJamGameInstance* GI = Cast<UCookieGameJamGameInstance>(GetGameInstance()))
     {
-        return;
+        FinalMusicVol *= GI->MusicVolume;
     }
-
-    USoundBase* SelectedSong =
-        CurrentPlaylist[CurrentSongIndex];
-
-    if (!SelectedSong)
-    {
-        return;
-    }
-
-    UE_LOG(
-        LogTemp,
-        Warning,
-        TEXT("RADIO PLAYING: %s"),
-        *SelectedSong->GetName()
-    );
 
     RadioAudioComponent->SetSound(SelectedSong);
-    RadioAudioComponent->SetVolumeMultiplier(Volume);
+    RadioAudioComponent->SetVolumeMultiplier(FinalMusicVol);
     RadioAudioComponent->Play();
 }
 

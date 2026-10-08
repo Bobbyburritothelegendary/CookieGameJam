@@ -90,6 +90,9 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Days")
     void GoToMainMenu();
+    
+    UFUNCTION(BlueprintCallable, Category = "Days")
+    void StartLevelTimer();
 
     UFUNCTION(BlueprintImplementableEvent, Category = "Days")
     void OnDayStarted(const FDayRow& DayRow);
@@ -174,4 +177,6 @@ private:
     bool bMusicActive = false;
 
     FTimerHandle FadeOutTimerHandle;
+    
+    void CommitProgress();
 };

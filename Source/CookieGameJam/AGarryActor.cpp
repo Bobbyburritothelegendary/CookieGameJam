@@ -55,26 +55,7 @@ void AAGarryActor::Interact(AActor* Interactor, AAInteractableBase* HeldItem)
 
 	if (!bHasOrder)
 	{
-		if (PickRandomItem(CurrentOrder))
-		{
-			if (OrderTimeLimit > 0.f)
-			{
-				float TimeLimit = OrderTimeLimit;
-				if (MyCharacter)
-				{
-					TimeLimit += (MyCharacter->TimeLevel - 1) * MyCharacter->TimeBonusPerLevel;
-				}
-				GetWorldTimerManager().SetTimer(OrderTimerHandle, this, &AAGarryActor::OnOrderTimeout, TimeLimit, false);
-			}
-
-			bHasOrder = true;
-
-			Speak(PickLine(EGarryLineType::Request, CurrentOrder.ItemID, TEXT("Bring me a {Item}")));
-		}
-		else
-		{
-			Say(TEXT("Garry has no item table assigned."));
-		}
+		NewOrder(MyCharacter);
 		return;
 	}
 
@@ -86,16 +67,17 @@ void AAGarryActor::Interact(AActor* Interactor, AAInteractableBase* HeldItem)
 			MyCharacter->AddCash(CurrentOrder.Reward);
 		}
 
-		//Destroy Item and reward Player
+		// Destroy Item and reward Player
 		HeldItem->Destroy();
 		GetWorldTimerManager().ClearTimer(OrderTimerHandle);
-		Speak(PickLine(EGarryLineType::Complete, CurrentOrder.ItemID, TEXT("Nice! Here's ${Reward}")), CompleteSound);
 		
+		Speak(PickLine(EGarryLineType::Complete, CurrentOrder.ItemID, TEXT("Nice! Here's ${Reward}")), CompleteSound);
+       
 		if (CompleteSound2)
 		{
 			UGameplayStatics::PlaySound2D(GetWorld(), CompleteSound2);
 		}
-		
+       
 		AGameModeBase* GameMode = UGameplayStatics::GetGameMode(this);
 		if (ACookieGameJamGameMode* CustomGameMode = Cast<ACookieGameJamGameMode>(UGameplayStatics::GetGameMode(this)))
 		{
@@ -103,6 +85,11 @@ void AAGarryActor::Interact(AActor* Interactor, AAInteractableBase* HeldItem)
 		}
 
 		bHasOrder = false;
+		CurrentOrder = FGarryItemRow(); 
+		
+		const float DelayBeforeNextOrder = 2.5f;
+		GetWorldTimerManager().SetTimer(NextOrderTimerHandle, this, &AAGarryActor::DelayedNextOrder, DelayBeforeNextOrder, false);
+
 		return;
 	}
 
@@ -117,10 +104,49 @@ void AAGarryActor::Say(const FString& Message)
     }
 }
 
+void AAGarryActor::NewOrder(ACookieGameJamCharacter* MyCharacter)
+{
+	if (PickRandomItem(CurrentOrder))
+	{
+		if (ACookieGameJamGameMode* GM = Cast<ACookieGameJamGameMode>(UGameplayStatics::GetGameMode(this)))
+		{
+			GM->StartLevelTimer();
+		}
+		
+		if (OrderTimeLimit > 0.f)
+		{
+			float TimeLimit = OrderTimeLimit;
+			if (MyCharacter)
+			{
+				TimeLimit += (MyCharacter->TimeLevel - 1) * MyCharacter->TimeBonusPerLevel;
+			}
+			GetWorldTimerManager().SetTimer(OrderTimerHandle, this, &AAGarryActor::OnOrderTimeout, TimeLimit, false);
+		}
+
+		bHasOrder = true;
+
+		Speak(PickLine(EGarryLineType::Request, CurrentOrder.ItemID, TEXT("Bring me a {Item}")));
+	}
+	else
+	{
+		Say(TEXT("Garry has no item table assigned."));
+	}
+	return;
+}
+
+void AAGarryActor::DelayedNextOrder()
+{
+	APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(this, 0);
+	ACookieGameJamCharacter* MyCharacter = Cast<ACookieGameJamCharacter>(PlayerPawn);
+	NewOrder(MyCharacter);
+}
+
 void AAGarryActor::OnOrderTimeout()
 {
-    bHasOrder = false;
-    Speak(PickLine(EGarryLineType::Timeout, CurrentOrder.ItemID, TEXT("Too slow! Forget it.")));
+	bHasOrder = false;
+	Speak(PickLine(EGarryLineType::Timeout, CurrentOrder.ItemID, TEXT("Too slow! Forget it.")));
+    
+	CurrentOrder = FGarryItemRow(); 
 }
 
 bool AAGarryActor::SkipOrder(AActor* Interactor)
@@ -129,7 +155,8 @@ bool AAGarryActor::SkipOrder(AActor* Interactor)
 
 	GetWorldTimerManager().ClearTimer(OrderTimerHandle);
 	bHasOrder = false;
-	//
+	CurrentOrder = FGarryItemRow();
+	
 	return true;
 }
 
@@ -278,6 +305,14 @@ FString AAGarryActor::GetCurrentOrder() const
     return CurrentOrder.DisplayName.ToString();
 }
 
+bool AAGarryActor::IsRemoteItem(FName InItemID) const
+{
+	FString ItemString = InItemID.ToString().ToLower();
+	return ItemString.Contains(TEXT("tvremote")) || 
+		   ItemString.Contains(TEXT("dvdremote")) || 
+		   ItemString.Contains(TEXT("remote"));
+}
+
 bool AAGarryActor::PickRandomItem(FGarryItemRow& OutRow)
 {
 	if (!ItemTable) return false;
@@ -286,39 +321,59 @@ bool AAGarryActor::PickRandomItem(FGarryItemRow& OutRow)
 	ItemTable->GetAllRows<FGarryItemRow>(TEXT("PickRandomItem"), AllRows);
 	if (AllRows.Num() == 0) return false;
 
-	const FName PreviousID = OutRow.ItemID;
+	const FName PrevItemID = OutRow.ItemID;
 
-	TArray<FGarryItemRow*> Rows;
-	for (FGarryItemRow* Row : AllRows)
+	TArray<FGarryItemRow*> ValidRows;
+	for (FGarryItemRow* ItemRow : AllRows)
 	{
-		if (AllRows.Num() == 1 || Row->ItemID != PreviousID)
+		if (!ItemRow) continue;
+		
+		if (AllRows.Num() > 1 && ItemRow->ItemID == PrevItemID)
 		{
-			Rows.Add(Row);
+			continue;
 		}
-	}
-	if (Rows.Num() == 0)
-	{
-		Rows = AllRows;
-	}
-
-	float Total = 0.f;
-	for (const FGarryItemRow* Row : Rows)
-	{
-		Total += Row->Weight;
-	}
-	if (Total <= 0.f) return false;
-
-	float Roll = FMath::FRandRange(0.f, Total);
-	for (const FGarryItemRow* Row : Rows)
-	{
-		Roll -= Row->Weight;
-		if (Roll < 0.f)
+		
+		if (IsRemoteItem(ItemRow->ItemID) && RequestedRemotesThisLevel.Contains(ItemRow->ItemID))
 		{
-			OutRow = *Row;
+			continue;
+		}
+
+		ValidRows.Add(ItemRow);
+	}
+	
+	if (ValidRows.Num() == 0)
+	{
+		ValidRows = AllRows;
+	}
+    
+	float TotalWeight = 0.f;
+	for (const FGarryItemRow* ItemRow : ValidRows)
+	{
+		TotalWeight += ItemRow->Weight;
+	}
+	if (TotalWeight <= 0.f) return false;
+
+	float Roll = FMath::FRandRange(0.f, TotalWeight);
+	for (const FGarryItemRow* ItemRow : ValidRows)
+	{
+		Roll -= ItemRow->Weight;
+		if (Roll <= 0.f)
+		{
+			OutRow = *ItemRow;
+            
+			if (IsRemoteItem(OutRow.ItemID))
+			{
+				RequestedRemotesThisLevel.Add(OutRow.ItemID);
+			}
+
 			return true;
 		}
 	}
 
-	OutRow = *Rows.Last();
+	OutRow = *ValidRows.Last();
+	if (IsRemoteItem(OutRow.ItemID))
+	{
+		RequestedRemotesThisLevel.Add(OutRow.ItemID);
+	}
 	return true;
 }

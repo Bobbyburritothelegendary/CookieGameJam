@@ -6,6 +6,7 @@
 #include "Engine/Engine.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
+#include "CookieGameJamCharacter.h"
 #include "TimerManager.h"
 
 
@@ -109,15 +110,7 @@ void ACookieGameJamGameMode::StartDay()
     CurrentDayRow = *Row;
 
     JobsCompleted = 0;
-    bDayActive = true;
-
-    GetWorldTimerManager().SetTimer(
-        DayTimerHandle,
-        this,
-        &ACookieGameJamGameMode::FinishDay,
-        FMath::Max(CurrentDayRow.TimeLimit, 1.f),
-        false
-    );
+    bDayActive = false;
 
     OnDayStarted(CurrentDayRow);
     OnJobProgress(
@@ -126,6 +119,19 @@ void ACookieGameJamGameMode::StartDay()
     );
 }
 
+void ACookieGameJamGameMode::StartLevelTimer()
+{
+    if (bDayActive) return;
+
+    bDayActive = true;
+    GetWorldTimerManager().SetTimer(
+        DayTimerHandle, 
+        this, 
+        &ACookieGameJamGameMode::FinishDay, 
+        FMath::Max(CurrentDayRow.TimeLimit, 1.f), 
+        false
+    );
+}
 
 void ACookieGameJamGameMode::FinishDay()
 {
@@ -257,30 +263,34 @@ void ACookieGameJamGameMode::RestartDay()
 
 bool ACookieGameJamGameMode::LoadNextDay()
 {
-    if (CurrentDayRow.NextLevel.IsNone())
-    {
-        return false;
-    }
+    if (CurrentDayRow.NextLevel.IsNone()) return false;
 
+    CommitProgress();
     PrepareForLevelChange();
-
-    UGameplayStatics::OpenLevel(
-        this,
-        CurrentDayRow.NextLevel
-    );
-
+    UGameplayStatics::OpenLevel(this, CurrentDayRow.NextLevel);
     return true;
 }
 
-
 void ACookieGameJamGameMode::GoToMainMenu()
 {
-    PrepareForLevelChange();
+    if (UCookieGameJamGameInstance* GI = Cast<UCookieGameJamGameInstance>(UGameplayStatics::GetGameInstance(this)))
+    {
+        GI->ResetProgress();
+    }
 
-    UGameplayStatics::OpenLevel(
-        this,
-        MainMenuLevel
-    );
+    PrepareForLevelChange();
+    UGameplayStatics::OpenLevel(this, MainMenuLevel);
+}
+
+void ACookieGameJamGameMode::CommitProgress()
+{
+    UCookieGameJamGameInstance* GI = Cast<UCookieGameJamGameInstance>(UGameplayStatics::GetGameInstance(this));
+    ACookieGameJamCharacter* Player = Cast<ACookieGameJamCharacter>(UGameplayStatics::GetPlayerCharacter(this, 0));
+
+    if (GI && Player)
+    {
+        GI->Progress = Player->CaptureProgress();
+    }
 }
 
 
